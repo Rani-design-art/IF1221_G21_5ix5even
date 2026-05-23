@@ -6,6 +6,7 @@
 
 startGame :-
     % bersihin state dari sisa game sebelumnya (kalau ada)
+    retractall(kartu_aksi_terakhir(_)),
     retractall(urutan_pemain(_)),
     retractall(giliran_sekarang(_)),
     retractall(efek_kartu(_)),
@@ -223,6 +224,9 @@ inisialisasi_deck(DeckLengkap) :-
     
     % Gandakan 2 deck dasar seperti kodemu sebelumnya
     append(DeckDasar, DeckDasar, DeckLengkap).
+
+    % Mimic
+    append(DeckGanda, [kartu(hitam, mimic)], DeckLengkap).
 
 % helper pembagian kartu
 bagi_kartu_pemain([], Deck, Deck). 
