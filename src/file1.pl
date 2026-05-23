@@ -8,6 +8,7 @@
 :- dynamic(urutan_pemain/1).
 :- dynamic(kartu_disembunyikan/2).
 :- dynamic(kartu_dibuang/1).
+:- dynamic(kartu_aksi_terakhir/1). 
 
 /* Facts */
 warna(merah). warna(kuning). warna(hijau). warna(biru).
@@ -28,6 +29,9 @@ valid_dimainkan(kartu(hitam, wild_draw_four), kartu(_, JenisAtas), WarnaAktif):-
     JenisAtas \= wild_draw_four,
     giliran_sekarang(Pemain),
     \+ punya_kartu_valid(Pemain, kartu(WarnaAktif, JenisAtas)).
+valid_dimainkan(kartu(hitam, mimic), kartu(_, JenisAtas), _) :-
+    JenisAtas \= wild,
+    JenisAtas \= wild_draw_four.
 valid_dimainkan(kartu(Warna, _), _, Warna).
 valid_dimainkan(kartu(_, Jenis), kartu(_, Jenis), _).
 
@@ -76,13 +80,19 @@ reverseP([H|T], Acc, Hasil) :-
     reverseP(T, [H|Acc], Hasil).
 
 /* Efek Kartu Aksi */
+catat_aksi_terakhir(Kartu) :-
+    retractall(kartu_aksi_terakhir(_)),
+    asserta(kartu_aksi_terakhir(Kartu)).
+    
 aplikasikan_efek(kartu(_, Jenis)) :-
     (jenis_angka(Jenis) ; Jenis == wild),
     !,
     pindah_giliran.
+    
 aplikasikan_efek(kartu(Warna, reverse)) :-
     Warna \= hitam,
     !,
+    catat_aksi_terakhir(kartu(Warna, reverse)),
     retract(urutan_pemain(ListLama)),
     reverse_pemain(ListLama, ListBaru),
     asserta(urutan_pemain(ListBaru)),
@@ -92,6 +102,7 @@ aplikasikan_efek(kartu(Warna, reverse)) :-
 aplikasikan_efek(kartu(Warna, skip)) :-
     Warna \= hitam,
     !,
+    catat_aksi_terakhir(kartu(Warna, skip)),
     giliran_sekarang(PemainSekarang),
     urutan_pemain(List),
     pemain_selanjutnya(PemainSekarang, List, PemainTerlewati),
@@ -102,6 +113,7 @@ aplikasikan_efek(kartu(Warna, skip)) :-
 aplikasikan_efek(kartu(Warna, draw_two)) :-
     Warna \= hitam,
     !,
+    catat_aksi_terakhir(kartu(Warna, draw_two)),
     giliran_sekarang(PemainSekarang),
     urutan_pemain(List),
     pemain_selanjutnya(PemainSekarang, List, PemainKenaEfek),
@@ -109,6 +121,55 @@ aplikasikan_efek(kartu(Warna, draw_two)) :-
     format('Kartu Draw Two! ~w mengambil 2 kartu dan dilewati.~n', [PemainKenaEfek]),
     pindah_giliran, 
     pindah_giliran. 
+
+aplikasikan_efek(kartu(hitam, mimic)) :- !,
+    write('Menelusuri riwayat permainan.'), nl,
+    (   kartu_aksi_terakhir(KartuAksi)
+    ->  KartuAksi = kartu(WA, JA),
+        format('Kartu aksi terakhir yang dimainkan: ~w-~w.~n', [WA, JA]),
+        format('Kartu mimic menyalin efek ~w!~n', [JA]),
+        aplikasikan_efek_mimic(KartuAksi)
+    ;   write('Belum ada kartu aksi sebelumnya. Mimic berlaku seperti wild.'), nl,
+        pindah_giliran
+    ).
+
+aplikasikan_efek_mimic(kartu(Warna, reverse)) :-
+    Warna \= hitam, !,
+    retract(urutan_pemain(ListLama)),
+    reverse_pemain(ListLama, ListBaru),
+    asserta(urutan_pemain(ListBaru)),
+    write('Kartu Reverse! Arah putaran pemain dibalik.'), nl,
+    pindah_giliran.
+
+aplikasikan_efek_mimic(kartu(Warna, skip)) :-
+    Warna \= hitam, !,
+    giliran_sekarang(PemainSekarang),
+    urutan_pemain(List),
+    pemain_selanjutnya(PemainSekarang, List, PemainTerlewati),
+    format('Kartu Skip! ~w dilewati.~n', [PemainTerlewati]),
+    pindah_giliran,
+    pindah_giliran.
+
+aplikasikan_efek_mimic(kartu(Warna, draw_two)) :-
+    Warna \= hitam, !,
+    giliran_sekarang(PemainSekarang),
+    urutan_pemain(List),
+    pemain_selanjutnya(PemainSekarang, List, PemainKenaEfek),
+    proses_ambil(PemainKenaEfek, 2),
+    format('Kartu Draw Two! ~w mengambil 2 kartu dan dilewati.~n', [PemainKenaEfek]),
+    pindah_giliran,
+    pindah_giliran.
+
+aplikasikan_efek_mimic(kartu(hitam, wild_draw_four)) :- !,
+    giliran_sekarang(PemainSekarang),
+    urutan_pemain(List),
+    pemain_selanjutnya(PemainSekarang, List, PemainKenaEfek),
+    proses_ambil(PemainKenaEfek, 4),
+    format('Kartu Wild Draw Four! ~w mengambil 4 kartu dan dilewati.~n', [PemainKenaEfek]),
+    pindah_giliran,
+    pindah_giliran.
+
+aplikasikan_efek_mimic(_) :- pindah_giliran.
 
 /* MAINKAN KARTU */
 mainkanKartu(NomorUrutKartudiTangan) :-
