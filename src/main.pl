@@ -3,6 +3,7 @@
 
 :- include('file1.pl').
 :- dynamic status_uni/1.
+:- dynamic arah_permainan/1.
 
 startGame :-
     % bersihin state dari sisa game sebelumnya (kalau ada)
@@ -14,6 +15,9 @@ startGame :-
     retractall(discard_top(_)),
     retractall(warna_aktif(_)),
     retractall(tangan_pemain(_, _)),
+    retractall(arah_permainan(_)),
+    retractall(status_uni(_)),
+    asserta(arah_permainan(kanan)),
 
     % minta input jumlah sm nama pemain
     input_jumlah_pemain(N),
@@ -223,7 +227,7 @@ inisialisasi_deck(DeckLengkap) :-
     append(TempDeck, DeckWild, DeckDasar),
     
     % Gandakan 2 deck dasar seperti kodemu sebelumnya
-    append(DeckDasar, DeckDasar, DeckLengkap).
+    append(DeckDasar, DeckDasar, DeckLengkap),
 
     % Mimic
     append(DeckGanda, [kartu(hitam, mimic)], DeckLengkap).
@@ -275,8 +279,7 @@ pick_at_index([H|T], I, Card, [H|Rest]) :-
     I1 is I - 1,
     pick_at_index(T, I1, Card, Rest).
 
-% fitur endGame & perhitungan poin
-
+% --- ENDGAME & NGITUNG POIN ---
 
 % aturan nilai poin kartu
 poin_kartu(kartu(_, Jenis), Poin) :-
@@ -410,3 +413,247 @@ tangkap(TargetPemain) :-
 % Fallback kalau nama pemain yang diinput ngawur / typo
 tangkap(TargetPemain) :-
     write('??? Siapa '), write(TargetPemain), write('? Ga ada di game ini! Cek typo.'), nl.
+
+% --- SAVE & LOAD GAME ---
+
+efek_memblokir(draw_four).
+efek_memblokir(draw_two).
+
+% save game
+
+saveGame :-
+    % Cek efek aktif — kalau ada efek yang memblokir, tolak
+    efek_kartu(Eff),
+    (   efek_memblokir(Eff)
+    ->  write('Game tidak bisa disimpan sekarang!'), nl,
+        format('Efek ~w harus diselesaikan terlebih dahulu! (tantang/ambilKartu).~n', [Eff])
+    ;   saveGame_eksekusi
+    ).
+
+saveGame_eksekusi :-
+    write('Masukkan nama file penyimpanan: '),
+    read(NamaFile),
+    atom_concat(NamaFile, '.txt', NamaFileTxt),
+
+    urutan_pemain(UrutanPemain),
+    giliran_sekarang(GiliranSekarang),
+    discard_top(kartu(WarnaTop, JenisTop)),
+    warna_aktif(WarnaAktif),
+
+    (   arah_permainan(Arah) -> true ; Arah = kanan ),
+
+    findall(P, status_uni(P), ListUNI),
+
+    open(NamaFileTxt, write, Stream),
+    
+    % urutan_pemain
+    format(Stream, 'urutan_pemain:~w.~n', [UrutanPemain]),
+    
+    % giliran
+    format(Stream, 'giliran:~w.~n', [GiliranSekarang]),
+    
+    % discard_top
+    format(Stream, 'discard_top:~w-~w.~n', [WarnaTop, JenisTop]),
+    
+    % warna_aktif
+    format(Stream, 'warna_aktif:~w.~n', [WarnaAktif]),
+    
+    % arah_permainan
+    format(Stream, 'arah_permainan:~w.~n', [Arah]),
+    
+    % status_UNI
+    format(Stream, 'status_UNI:~w.~n', [ListUNI]),
+    
+    % kartu tiap pemain
+    tulis_kartu_pemain(Stream, UrutanPemain),
+    
+    close(Stream),
+    write('                                                                        @@@@@@@@@'), nl,
+    write('                                                                      @@@       @@@'), nl,
+    write('                                                                     @@          @@'), nl,
+    write('                                                                    @@           .@@'), nl,
+    write('                                                                   @@             @@'), nl,
+    write('                                                                   @@             @@.'), nl,
+    write('                                                                   @@            @@'), nl,
+    write('                                                                   @=           .@@'), nl,
+    write('                                                                   @@          @@@@@@@@@@@@'), nl,
+    write('                   @@@@@                                         @@        @@@           @@@@'), nl,
+    write('           @@@@  @@    @@@                                     @@        @@@                @@@'), nl,
+    write('          @   .@@@@      @@                                   @@       -@@                   @@@'), nl,
+    write('         @@      @@@      @@                                 @@        @@                     =@@'), nl,
+    write('          @@      @@@      @@                               @@        @@@@@@@@@@@@             @@@'), nl,
+    write('           @@@      =@@    @@                               @@       @@                        .@@'), nl,
+    write('            @@      @@      @@                              @:       @@                         @@'), nl,
+    write('             @@-     @@     .@                              @       @@                         @@@'), nl,
+    write('              :@@    @@      @+   @+                       @@       @@                         @@-'), nl,
+    write('               @@   .@@.          @@@@@@                   @@       @@                         @@'), nl,
+    write('           @@@@               @@@@@    @@@@@                @@      @@@@@@@@@@@@@             @@@'), nl,
+    write('        @@@   @@@                  @@@@   @@@@               @@      @@                      .@@'), nl,
+    write('      @@@   @@                        @@@   @@@             @@@@      @@@                   .@@'), nl,
+    write('    @@@   @@                           @@@    @@@          @@  @@      @@@                 @@@'), nl,
+    write('   @@#    @                             @@     @@@        @@@    @@@      @@@             @@@'), nl,
+    write('  @@     @@                      @@@@=     @      @@     @@        @@@@      @@@@    @@@@@@'), nl,
+    write(' @@      @@       @@@@=         @@  @@@         @@@   @@@            @@@@@@@@@@@@@@@@'), nl,
+    write('+@@              @@  @@@         @@@@@@.        @@  @@                 @@@@'), nl,
+    write('@@               @@@@@@.          @@@            @@@@@               @@@@'), nl,
+    write('@@                 @@@                 @ @@ @    @@@              @@@@'), nl,
+    write('@@        @  @ -             @@  @              @@            @@@@@'), nl,
+    write('@@       @@ @  @          @@@  @@             @@@           @@@'), nl,
+    write(' @@@                           .@.             @         .@@@'), nl,
+    write('  @@                                                   @@@'), nl,
+    write('    @@                                              .@@@'), nl,
+    write('      @@@                                        .@@@'), nl,
+    write('       @@                                       @@'), nl,
+    write('        @@@                                    @'), nl,
+    write('      @@.                                     @@'), nl,
+    write('      @                                       @'), nl,
+    format('      @@.@@@@                                @@      Status permainan berhasil disimpan ke ~w.', [NamaFileTxt]), nl,
+    write('     @      @                                @-'), nl,
+    write('    @       @@                              @@'), nl,
+    write('    @       @@                               @@'), nl,
+    write('     @     @@                        @@@@@@   @@'), nl,
+    write('      @@@@ @@   @@@@@@@@@@@@@@@@@@@@      @@   @@'), nl,
+    write('           @@ *@@                           @@@@'), nl,
+    write('             @@'), nl.
+
+% helper untuk nulis kartu pemain
+tulis_kartu_pemain(_, []).
+tulis_kartu_pemain(Stream, [Pemain|Sisa]) :-
+    tangan_pemain(Pemain, ListKartu),
+    kartu_list_ke_format(ListKartu, ListFormat),
+    format(Stream, 'kartu(~w):~w.~n', [Pemain, ListFormat]),
+    tulis_kartu_pemain(Stream, Sisa).
+
+% konversi list kartu internal ke format Warna-Jenis
+kartu_list_ke_format([], []).
+kartu_list_ke_format([kartu(W,J)|Sisa], [WJ|SisaFormat]) :-
+    atomic_list_concat([W, J], '-', WJ),
+    kartu_list_ke_format(Sisa, SisaFormat).
+
+% load game
+
+loadGame :-
+    write('Masukkan nama file yang akan dimuat: '),
+    read(NamaFile),
+    atom_concat(NamaFile, '.txt', NamaFileTxt),
+    
+    (   exists_file(NamaFileTxt)
+    ->  loadGame_eksekusi(NamaFileTxt)
+    ;   format('Error: File ~w tidak ditemukan.~n', [NamaFileTxt])
+    ).
+
+loadGame_eksekusi(NamaFileTxt) :-
+    retractall(urutan_pemain(_)),
+    retractall(giliran_sekarang(_)),
+    retractall(discard_top(_)),
+    retractall(warna_aktif(_)),
+    retractall(efek_kartu(_)),
+    retractall(deck_kartu(_)),
+    retractall(tangan_pemain(_, _)),
+    retractall(kartu_disembunyikan(_, _)),
+    retractall(kartu_aksi_terakhir(_)),
+    retractall(status_uni(_)),
+    retractall(arah_permainan(_)),
+
+    open(NamaFileTxt, read, Stream),
+    baca_semua_baris(Stream),
+    close(Stream),
+
+    asserta(efek_kartu(none)),
+
+    write('                  .=**-.=%%*:    -=*+.:==.'), nl,
+    write('                   @+::=@#::=%.  *%::-#@--%='), nl,
+    write('                  .@*:::::::+#.  *%:::::::%#'), nl,
+    write('                   :@%=-::=%+    :%%-:::-##'), nl,
+    write('                     :*@@@%:       -#%#%#:'), nl,
+    write('                       #+           :#-'), nl,
+    write('                      :@%#+.        +#-:'), nl,
+    write('             .--:.    .%#*#        +@#*# .-+++-.'), nl,
+    write('           .##=:-#%+  :%:          #+.. +%-..-#@+'), nl,
+    format('           @*     =@=-%@@@@@@@@@@@@@%+.:%-     =%:        Status permainan berhasil dimuat dari ~w.', [NamaFileTxt]), nl,
+    write('           %=     =%*=.             .=*#%=     -%:           Selamat bermain~'), nl,
+    write('            =#:                                =%-'), nl,
+    write('          *%#-                                :*'), nl,
+    write('        =@#                                    .#@:                  ..'), nl,
+    write('      :%%:                                       .*@*               .:=#+'), nl,
+    write('    .*@+            -##*+:           =#%#*+        :%%.            :+#+ +='), nl,
+    write('    +@-                                             :#@.              *#'), nl,
+    write('   #@-               ...               ..            .%@:  *@%%%@*'), nl,
+    write('  +@-             =@%=:*%-          -%%++%%-          =@*-@*::::=@+===-:'), nl,
+    write(' -@#             -@@#==#@%.        .%@*.  #%.          %@@*:::::-%#-:-*@+'), nl,
+    write(' +@:         .....%%=@%@@*         .%@*@@%@%           *@@-::::::::::::=%:'), nl,
+    write(' *%.      .%*-%+--:-*%%%=           :#%#@@#:=+:=--:    -@@+::::::::::::=%-'), nl,
+    write('.#%      .#=-#==%-##          +@-      .:..+#-%#=%*%.  :@@@-::::::::::=@+'), nl,
+    write('.#%.      ..:::=::-.       %#*@@=--       .=:=+:==%-   :@=*@-:::::::+%@*'), nl,
+    write(' +@.                            ..          ......     *@- @@+++#%@@#:'), nl,
+    write('  *@:                                                 *%=%=.%+'), nl,
+    write('   #%-                                               +@-@=:@*'), nl,
+    write('    :%#.                                           .*@@@==@-'), nl,
+    write('     .+@#:                                        =@*:##*%-'), nl,
+    write('       :%-                                       .-.  -#+'), nl,
+    write('       =%: :%-                                      *@:'), nl,
+    write('       +%: :%-                                   .##:'), nl,
+    write('       .#*+%*.                                   +@'), nl,
+    write('         ..=%:                                  -@-'), nl,
+    write('          *@@@=                                -@='), nl,
+    write('         :#  -@#.                            .#%:'), nl,
+    write('          =*#**+%#:                        :*%='), nl,
+    write('                 -#@*:                  =#%*:'), nl,
+    write('                    .=*%%+  .+.  -+**%%#-'), nl,
+    write('                        :%= :%*  *%'), nl,
+    write('                         +%..#* =@:'), nl,
+    write('                          .===*@+'), nl,
+    giliran_sekarang(GiliranSekarang),
+    format('Melanjutkan giliran ~w.~n', [GiliranSekarang]).
+
+baca_semua_baris(Stream) :-
+    read_term(Stream, Term, [end_of_file(eof)]),
+    (   Term == eof
+    ->  true
+    ;   proses_baris(Term),
+        baca_semua_baris(Stream)
+    ).
+
+
+proses_baris(urutan_pemain : ListPemain) :- !,
+    asserta(urutan_pemain(ListPemain)).
+
+proses_baris(giliran : Nama) :- !,
+    asserta(giliran_sekarang(Nama)).
+
+proses_baris(discard_top : (Warna - Jenis)) :- !,
+    asserta(discard_top(kartu(Warna, Jenis))).
+
+proses_baris(warna_aktif : Warna) :- !,
+    asserta(warna_aktif(Warna)).
+
+proses_baris(arah_permainan : Arah) :- !,
+    asserta(arah_permainan(Arah)),
+    (   Arah == kiri
+    ->  urutan_pemain(ListLama),
+        reverse_pemain(ListLama, ListBaru),
+        retract(urutan_pemain(ListLama)),
+        asserta(urutan_pemain(ListBaru))
+    ;   true
+    ).
+
+proses_baris(status_UNI : ListUNI) :- !,
+    pasang_status_uni(ListUNI).
+
+pasang_status_uni([]).
+pasang_status_uni([P|Sisa]) :-
+    asserta(status_uni(P)),
+    pasang_status_uni(Sisa).
+
+proses_baris(kartu(Nama) : ListFormat) :- !,
+    format_ke_kartu_list(ListFormat, ListKartu),
+    asserta(tangan_pemain(Nama, ListKartu)).
+
+proses_baris(Term) :-
+    format('[loadGame] Baris tidak dikenali, dilewati: ~w~n', [Term]).
+
+format_ke_kartu_list([], []).
+format_ke_kartu_list([WJ|Sisa], [kartu(W,J)|SisaKartu]) :-
+    % WJ adalah term W-J (operator minus di Prolog)
+    WJ =.. [-, W, J],
+    format_ke_kartu_list(Sisa, SisaKartu).
