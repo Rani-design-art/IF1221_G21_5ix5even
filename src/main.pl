@@ -8,7 +8,8 @@
 
 startGame :-
     % bersihin state dari sisa game sebelumnya (kalau ada)
-    retractall(kartu_aksi_terakhir(_)),
+    retractall(kartu_aksi_terakhir(_, _, _)),
+    retractall(giliran_ke(_)),
     retractall(urutan_pemain(_)),
     retractall(giliran_sekarang(_)),
     retractall(efek_kartu(_)),
@@ -30,6 +31,7 @@ startGame :-
     ListPemain = [PemainPertama|_], 
     asserta(giliran_sekarang(PemainPertama)),
     asserta(efek_kartu(none)),
+    asserta(giliran_ke(0)), 
 
     % feedback ke terminal biar tau sukses
     nl, write('                  .=**-.=%%*:    -=*+.:==.'), nl,
@@ -589,7 +591,8 @@ loadGame_eksekusi(NamaFileTxt) :-
     retractall(deck_kartu(_)),
     retractall(tangan_pemain(_, _)),
     retractall(kartu_disembunyikan(_, _)),
-    retractall(kartu_aksi_terakhir(_)),
+    retractall(kartu_aksi_terakhir(_, _, _)),
+    retractall(giliran_ke(_)), 
     retractall(status_uni(_)),
     retractall(arah_permainan(_)),
 
@@ -598,6 +601,7 @@ loadGame_eksekusi(NamaFileTxt) :-
     close(Stream),
 
     asserta(efek_kartu(none)),
+    asserta(giliran_ke(0)),
 
     write('                  .=**-.=%%*:    -=*+.:==.'), nl,
     write('                   @+::=@#::=%.  *%::-#@--%='), nl,
