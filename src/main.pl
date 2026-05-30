@@ -2,8 +2,9 @@
 % fitur startGame (Bintang & Neysa)
 
 :- include('file1.pl').
-:- dynamic status_uni/1.
-:- dynamic arah_permainan/1.
+:- dynamic(status_uni/1).
+:- dynamic(arah_permainan/1).
+:- dynamic(kartu_disembunyikan/2).
 
 startGame :-
     % bersihin state dari sisa game sebelumnya (kalau ada)
@@ -17,6 +18,7 @@ startGame :-
     retractall(tangan_pemain(_, _)),
     retractall(arah_permainan(_)),
     retractall(status_uni(_)),
+    retractall(kartu_disembunyikan(_, _)),
     asserta(arah_permainan(kanan)),
 
     % minta input jumlah sm nama pemain
@@ -227,9 +229,9 @@ inisialisasi_deck(DeckLengkap) :-
     append(TempDeck, DeckWild, DeckDasar),
     
     % Gandakan 2 deck dasar seperti kodemu sebelumnya
-    append(DeckDasar, DeckDasar, DeckLengkap),
+    append(DeckDasar, DeckDasar, DeckGanda),
 
-    % Mimic
+    % Tambahkan kartu Mimic ke deck
     append(DeckGanda, [kartu(hitam, mimic)], DeckLengkap).
 
 % helper pembagian kartu
@@ -369,46 +371,67 @@ cetak_urutan_pemenang([skor(Poin, _, _, Pemain)|T], Peringkat) :-
     format('~w. ~w (~w poin)~n', [Peringkat, Pemain, Poin]),
     Peringkat1 is Peringkat + 1,
     cetak_urutan_pemenang(T, Peringkat1).
-
 % --- FITUR TANGKAP ---
 
 tangkap(TargetPemain) :-
     % 1. Validasi: pastikan TargetPemain beneran ada di dalam game
     urutan_pemain(ListPemain),
     member(TargetPemain, ListPemain),
+    
+    giliran_sekarang(Pemanggil),
+    
+    % 2. Cek jebakan: apakah target sedang menyembunyikan kartu?
+    (   kartu_disembunyikan(TargetPemain, _) ->
+        format('Eits! Tangkap gagal! Ada kartu yang disembunyikan oleh ~w.~n',[TargetPemain]),
+        write('Hukuman: '), write(Pemanggil), write(' harus ambil 2 kartu tambahan.'), nl,
+        
+        % Beri 1 kartu penalti ke pemanggil
+        deck_kartu(DeckSekarang),
+        ambil_N_kartu(1, DeckSekarang, KartuHukuman, SisaDeck),
+        retract(deck_kartu(DeckSekarang)),
+        asserta(deck_kartu(SisaDeck)),
+        
+        % Masukkan kartu penalti ke tangan pemanggil
+        tangan_pemain(Pemanggil, TanganLama),
+        append(TanganLama, KartuHukuman, TanganBaru),
+        retract(tangan_pemain(Pemanggil, TanganLama)),
+        asserta(tangan_pemain(Pemanggil, TanganBaru)),
+        
+        % Langsung pindah giliran karena salah tangkap
+        pindah_giliran
+    ;   
+        % 3. Jika aman, eksekusi logika tangkap normal (cek UNI)
+        tangan_pemain(TargetPemain, Tangan),
+        length(Tangan, JumlahKartu),
+        (   JumlahKartu =:= 1 ->
+            % Jika kartunya sisa 1, cek apakah dia udah bilang UNI
+            (   \+ status_uni(TargetPemain) ->
+                % Kalau BELUM bilang UNI -> Kena hukuman ambil 2 kartu
+                write('MAMPUSSSZZSS! '), write(TargetPemain), write(' lupa bilang UNI kan lu'), nl,
+                write('Hukuman: '), write(TargetPemain), write(' harus ambil 2 kartu tambahan.'), nl,
 
-    % 2. Ambil list kartu di tangan TargetPemain
-    tangan_pemain(TargetPemain, Tangan),
-    length(Tangan, JumlahKartu),
+                % Proses ambil 2 kartu dari deck
+                deck_kartu(DeckNormal),
+                ambil_N_kartu(2, DeckNormal, KartuHukum2, SisaDeckNormal),
 
-    % 3. Eksekusi logika tangkap
-    ( JumlahKartu =:= 1 ->
-        % Jika kartunya sisa 1, cek apakah dia udah bilang UNI
-        ( \+ status_uni(TargetPemain) ->
-            % Kalau BELUM bilang UNI -> Kena hukuman ambil 2 kartu
-            write('MAMPUSSSZZSS! '), write(TargetPemain), write(' lupa bilang UNI kan lu'), nl,
-            write('Hukuman: '), write(TargetPemain), write(' harus ambil 2 kartu tambahan.'), nl,
+                % Update state deck
+                retract(deck_kartu(DeckNormal)),
+                asserta(deck_kartu(SisaDeckNormal)),
 
-            % Proses ambil 2 kartu dari deck
-            deck_kartu(DeckSekarang),
-            ambil_N_kartu(2, DeckSekarang, KartuHukuman, SisaDeck),
-
-            % Update state deck
-            retract(deck_kartu(DeckSekarang)),
-            asserta(deck_kartu(SisaDeck)),
-
-            % Update state tangan pemain yang ditangkap
-            append(Tangan, KartuHukuman, TanganBaru),
-            retract(tangan_pemain(TargetPemain, Tangan)),
-            asserta(tangan_pemain(TargetPemain, TanganBaru))
+                % Update state tangan pemain yang ditangkap
+                append(Tangan, KartuHukum2, TanganBaruNormal),
+                retract(tangan_pemain(TargetPemain, Tangan)),
+                asserta(tangan_pemain(TargetPemain, TanganBaruNormal))
+            ;
+                % Kalau SUDAH bilang UNI
+                write('enak aje lu '), write(TargetPemain), write(' udah bilang UNI tadi, jadi aman dongg'), nl
+            )
         ;
-            % Kalau SUDAH bilang UNI
-            write('enak aje lu '), write(TargetPemain), write(' udah bilang UNI tadi, jadi aman dongg'), nl
+            % Jika kartunya BUKAN sisa 1
+            write('Salah tangkap! Kartu '), write(TargetPemain), write(' masih '), write(JumlahKartu), write(' lembar...'), nl
         )
-    ;
-        % Jika kartunya BUKAN sisa 1
-        write('Salah tangkap! Kartu '), write(TargetPemain), write(' masih '), write(JumlahKartu), write(' lembar...'), nl
-    ), !.
+    ), !. 
+
 
 % Fallback kalau nama pemain yang diinput ngawur / typo
 tangkap(TargetPemain) :-
@@ -467,6 +490,9 @@ saveGame_eksekusi :-
     % kartu tiap pemain
     tulis_kartu_pemain(Stream, UrutanPemain),
     
+    % simpan status kartu tersembunyi
+    tulis_kartu_sembunyi(Stream, UrutanPemain),
+
     close(Stream),
     write('                                                                        @@@@@@@@@'), nl,
     write('                                                                      @@@       @@@'), nl,
@@ -523,6 +549,17 @@ tulis_kartu_pemain(Stream, [Pemain|Sisa]) :-
     kartu_list_ke_format(ListKartu, ListFormat),
     format(Stream, 'kartu(~w):~w.~n', [Pemain, ListFormat]),
     tulis_kartu_pemain(Stream, Sisa).
+
+% helper untuk menulis kartu sembunyi
+tulis_kartu_sembunyi(_, []).
+tulis_kartu_sembunyi(Stream, [Pemain|Sisa]) :-
+    (   kartu_disembunyikan(Pemain, Kartu)
+    ->  Kartu = kartu(W, J),
+        atomic_list_concat([W, J], '-', WJ),
+        format(Stream, 'sembunyi(~w):~w.~n', [Pemain, WJ])
+    ;   true
+    ),
+    tulis_kartu_sembunyi(Stream, Sisa).
 
 % konversi list kartu internal ke format Warna-Jenis
 kartu_list_ke_format([], []).
@@ -615,6 +652,7 @@ baca_semua_baris(Stream) :-
     ).
 
 
+
 proses_baris(urutan_pemain : ListPemain) :- !,
     asserta(urutan_pemain(ListPemain)).
 
@@ -640,17 +678,24 @@ proses_baris(arah_permainan : Arah) :- !,
 proses_baris(status_UNI : ListUNI) :- !,
     pasang_status_uni(ListUNI).
 
-pasang_status_uni([]).
-pasang_status_uni([P|Sisa]) :-
-    asserta(status_uni(P)),
-    pasang_status_uni(Sisa).
-
 proses_baris(kartu(Nama) : ListFormat) :- !,
     format_ke_kartu_list(ListFormat, ListKartu),
     asserta(tangan_pemain(Nama, ListKartu)).
 
+proses_baris(sembunyi(Nama) : FormatKartu) :- !,
+    FormatKartu =.. [-, W, J],
+    asserta(kartu_disembunyikan(Nama, kartu(W, J))).
+
 proses_baris(Term) :-
     format('[loadGame] Baris tidak dikenali, dilewati: ~w~n', [Term]).
+
+% --- HELPER FUNGSI DIPINDAHKAN KE BAWAH SINI ---
+% Supaya tidak memotong kumpulan 'proses_baris' di atas
+
+pasang_status_uni([]).
+pasang_status_uni([P|Sisa]) :-
+    asserta(status_uni(P)),
+    pasang_status_uni(Sisa).
 
 format_ke_kartu_list([], []).
 format_ke_kartu_list([WJ|Sisa], [kartu(W,J)|SisaKartu]) :-

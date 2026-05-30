@@ -17,7 +17,8 @@ warna_wild(hitam).
 jenis_angka(0). jenis_angka(1). jenis_angka(2). jenis_angka(3). jenis_angka(4).
 jenis_angka(5). jenis_angka(6). jenis_angka(7). jenis_angka(8). jenis_angka(9).
 jenis_aksi(skip). jenis_aksi(reverse). jenis_aksi(draw_two).
-jenis_aksi_wild(wild). jenis_aksi_wild(wild_draw_four).
+jenis_aksi_wild(wild). 
+jenis_aksi_wild(wild_draw_four). 
 jenis_aksi_wild(mimic).
 
 /* Rules */
@@ -215,6 +216,7 @@ ambilKartu :-
 
 proses_ambil(_,0) :- !.
 proses_ambil(Pemain, N) :-
+    retractall(status_uni(Pemain)),
     retract(deck_kartu([H|T])),
     retract(tangan_pemain(Pemain, Tangan)),
     append(Tangan, [H], Tangan1),
@@ -275,8 +277,6 @@ tampilkan_aksi_utama(_) :-
     write('7. tampilkanKartu'), nl.
  
 /* LIHAT KARTU */
-:- dynamic(kartu_disembunyikan/2).
- 
 lihatKartu :-
     giliran_sekarang(Pemain),
     tangan_pemain(Pemain, ListKartu),
@@ -286,7 +286,7 @@ lihatKartu :-
 tampilkan_list_kartu([], _, _) :- !.
  
 tampilkan_list_kartu([kartu(Warna, Jenis) | Sisa], Pemain, N) :-
-    (   kartu_disembunyikan(Pemain, N)
+    (   kartu_disembunyikan(Pemain, kartu(Warna, Jenis))
     ->  format('~w. ~w-~w (disembunyikan)~n', [N, Warna, Jenis])
     ;   format('~w. ~w-~w~n', [N, Warna, Jenis])
     ),
@@ -345,8 +345,7 @@ tantang:-
     
     kartu_dibuang(KartuSebelum),
     (punya_kartu_valid(Sebelum, KartuSebelum)->
-        tantangBerhasil(Sebelum);tantangGagal(Sesudah)).
-
+        tantangBerhasil(Sebelum);tantangGagal(Sesudah)),
     retract(efek_kartu(_)),
     asserta(efek_kartu(none)),
     pindah_giliran.
@@ -364,15 +363,19 @@ tantangGagal(Pemain):-
 uni(NomorUrut) :-
     giliran_sekarang(Pemain),
     tangan_pemain(Pemain, ListKartu),
-    length(ListKartu, JumlahKartu),
+    length(ListKartu, JumlahDiTangan),
+  
+    (   kartu_disembunyikan(Pemain, _)
+    ->  JumlahSembunyi = 1
+    ;   JumlahSembunyi = 0
+    ),
+    TotalKartu is JumlahDiTangan + JumlahSembunyi,
     
-    % kartu di tangan harus 2
-    (   JumlahKartu \= 2
-    ->  write('Gagal deklarasi UNI! Anda hanya bisa menggunakan perintah ini jika kartu Anda sisa 2.'), nl, !, fail
+    (   TotalKartu \= 2
+    ->  write('Gagal deklarasi UNI! Anda hanya bisa menggunakan perintah ini jika total kartu Anda sisa 2.'), nl, !, fail
     ;   true
     ),
 
-    % nomor urut kartu ada di tangan
     (   ambil_kartu(NomorUrut, ListKartu, KartuPilihan)
     ->  discard_top(KartuAtas),
         warna_aktif(WarnaAktif),
@@ -383,6 +386,9 @@ uni(NomorUrut) :-
   
             format('~w berteriak: "UNI!!!"~n', [Pemain]),
             format('~w memainkan kartu: ~w-~w.~n', [Pemain, WarnaKartu, JenisKartu]),
+
+            % catat status UNI
+            asserta(status_uni(Pemain)),
 
             hapus_kartu_ke(NomorUrut, ListKartu, ListKartuBaru),
             retract(tangan_pemain(Pemain, _)),
@@ -398,4 +404,45 @@ uni(NomorUrut) :-
         ;   write('Kartu tidak valid! Warna atau jenisnya tidak sesuai dengan meja.'), nl
         )
     ;   write('Nomor urut tidak valid! Anda tidak memiliki kartu di posisi tersebut.'), nl
+    ).
+
+/* BONUS: SembunyikanKartu */
+% menyembunyikan kartu
+sembunyikanKartu(NomorUrut) :-
+    giliran_sekarang(Pemain),
+    tangan_pemain(Pemain, ListKartu),
+    length(ListKartu, Jumlah),
+    (
+        Jumlah =:= 1 -> 
+        write('Gagal: Kamu hanya memiliki satu buah kartu, tidak bisa disembunyikan!'), nl, !
+    ;
+        kartu_disembunyikan(Pemain, _) ->
+        write('Gagal: Kamu sudah menyembunyikan sebuah kartu!'), nl, !
+    ;
+        ambil_elemen_ke(NomorUrut, ListKartu, KartuYgDipilih) ->
+        asserta(kartu_disembunyikan(Pemain, KartuYgDipilih)),
+        KartuYgDipilih = kartu(Warna, Jenis),
+        format('Kartu ~w-~w berhasil disembunyikan.~n', [Warna, Jenis]), !
+    ;
+        write('Gagal: Nomor urut kartu tidak valid!'), nl
+    ).
+
+% helper mengambil elemen
+ambil_elemen_ke(1, [H|_], H) :- !.
+ambil_elemen_ke(N, [_|T], Elem) :-
+    N > 1,
+    N1 is N - 1,
+    ambil_elemen_ke(N1, T, Elem).
+
+% menampilkan kembali kartu
+tampilkanKartu :-
+    giliran_sekarang(Pemain),
+    (
+        % Tarik status dari memori tersembunyi
+        retract(kartu_disembunyikan(Pemain, KartuYgDisembunyikan)) ->
+        % Karena kartu tidak pernah keluar dari tangan, kita tidak perlu repot append()
+        KartuYgDisembunyikan = kartu(Warna, Jenis),
+        format('Kartu ~w-~w berhasil ditampilkan dan kembali normal.~n', [Warna, Jenis]), !
+    ;
+        write('Kamu tidak sedang menyembunyikan kartu apapun.'), nl
     ).
