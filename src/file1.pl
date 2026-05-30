@@ -81,7 +81,7 @@ reverseP([H|T], Acc, Hasil) :-
 catat_aksi_terakhir(Kartu) :-
     giliran_sekarang(Pemain),
     giliran_ke(N),
-    retractall(kartu_aksi_terakhir(_)),
+    retractall(kartu_aksi_terakhir(_, _, _)),
     asserta(kartu_aksi_terakhir(Kartu, Pemain, N)).
     
 aplikasikan_efek(kartu(_, Jenis)) :-
@@ -119,6 +119,16 @@ aplikasikan_efek(kartu(Warna, draw_two)) :-
     pemain_selanjutnya(PemainSekarang, List, PemainKenaEfek),
     proses_ambil(PemainKenaEfek, 2),
     format('Kartu Draw Two! ~w mengambil 2 kartu dan dilewati.~n', [PemainKenaEfek]),
+    pindah_giliran, 
+    pindah_giliran. 
+
+aplikasikan_efek(kartu(hitam, wild_draw_four)) :-
+    catat_aksi_terakhir(kartu(hitam, wild_draw_four)),
+    giliran_sekarang(PemainSekarang),
+    urutan_pemain(List),
+    pemain_selanjutnya(PemainSekarang, List, PemainKenaEfek),
+    proses_ambil(PemainKenaEfek, 4),
+    format('Kartu Draw Four! ~w mengambil 4 kartu dan dilewati.~n', [PemainKenaEfek]),
     pindah_giliran, 
     pindah_giliran. 
 
