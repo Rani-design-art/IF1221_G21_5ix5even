@@ -1,5 +1,6 @@
 # IF1221_G21_5ix5even
 Tugas Besar Logika Komputasional - Kelompok G21 5ix5even K2
+
 Mensimulasikan permainan UNI dengan Prolog. Dengan memodelkan aturan permainan dalam bentuk fakta dan rule, kami memeriksa kemungkinan langkah yang valid serta memastikan permainan berjalan sesuai dengan aturan keluarga tersebut.
 
 ---
