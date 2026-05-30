@@ -25,11 +25,9 @@ jenis_aksi_wild(mimic).
 valid_dimainkan(kartu(hitam, wild), kartu(_,JenisAtas), _) :-
     JenisAtas \= wild,
     JenisAtas \= wild_draw_four.
-valid_dimainkan(kartu(hitam, wild_draw_four), kartu(_, JenisAtas), WarnaAktif):-
+valid_dimainkan(kartu(hitam, wild_draw_four), kartu(_, JenisAtas), _):-
     JenisAtas \= wild,
-    JenisAtas \= wild_draw_four,
-    giliran_sekarang(Pemain),
-    \+ punya_kartu_valid(Pemain, kartu(WarnaAktif, JenisAtas)).
+    JenisAtas \= wild_draw_four.
 valid_dimainkan(kartu(hitam, mimic), kartu(_, JenisAtas), _) :-
     JenisAtas \= wild,
     JenisAtas \= wild_draw_four.
