@@ -444,3 +444,92 @@ tampilkanKartu :-
     ;
         write('Kamu tidak sedang menyembunyikan kartu apapun.'), nl
     ).
+
+/* HELPER GOD'S HAND */
+/* Cek semua kartu satu */
+semua_kartu_satu:-
+    urutan_pemain(List),
+    cek_semua_satu(List).
+
+cek_semua_satu([]).
+
+cek_semua_satu([Pemain|Pemain1]):-
+    tangan_pemain(Pemain, Tangan),
+    length(Tangan, 1),
+    cek_semua_satu(Pemain1).
+
+/* Pilih pemain acak */
+pilih_pemain_acak(Pemain):-
+    urutan_pemain(List),
+    length(List, N),
+    random(N, I),
+    Pos is I + 1,
+    ambil_kartu(Pos, List, Pemain),
+
+    tangan_pemain(Pemain, Tangan),
+    length(Tangan, Len),
+    Len > 1, 
+    !.
+
+pilih_pemain_acak(Pemain):-
+    pilih_pemain_acak(Pemain).
+
+/* Pilih kartu acak */
+pilih_kartu_acak(Pemain, Pos, Kartu):-
+    tangan_pemain(Pemain, Tangan),
+    length(Tangan, N),
+    random(N, I),
+    Pos is I + 1,
+    ambil_kartu(Pos, Tangan, Kartu).
+
+/* Pilih pemain tujuan */
+pemain_tujuan(Pemain, Tujuan):-
+    urutan_pemain(List),
+    length(List, N),
+    random(N, I),
+    Pos is I + 1,
+    ambil_kartu(Pos, List, Tujuan),
+
+    Pemain \= Tujuan,
+    !.
+
+pemain_tujuan(Pemain, Tujuan):-
+    pemain_tujuan(Pemain, Tujuan).
+
+/* Pindahkan kartu */
+pindah_kartu(Pemain, Tujuan, PosisiKartu, KartuPilihan):-
+    tangan_pemain(Pemain, Tangan),
+    hapus_kartu_ke(PosisiKartu, Tangan, TanganBaru),
+
+    retract(tangan_pemain(Pemain, _)),
+    asserta(tangan_pemain(Pemain, TanganBaru)),
+
+    tangan_pemain(Tujuan, TanganTujuan),
+    append(TanganTujuan, [KartuPilihan], TanganTujuanBaru),
+
+    retract(tangan_pemain(Tujuan, _)),
+    asserta(tangan_pemain(Tujuan, TanganTujuanBaru)).
+
+/* BONUS: GOD'S HAND */
+godsHand:-
+    semua_kartu_satu,
+    write('godsHand tidak bisa dijalankan!'), nl,
+    !.
+
+godsHand:-
+    random(100, X),
+    X >= 20,
+    write('Tuhan tidak telah berkehendak.'), nl,
+    !.
+
+godsHand:-
+    pilih_pemain_acak(Pemain),
+    pilih_kartu_acak(Pemain, Pos, Kartu),
+    pemain_tujuan(Pemain, Tujuan),
+    pindah_kartu(Pemain, Tujuan, Pos, Kartu),
+
+    Kartu = kartu(Warna, Jenis),
+
+    write('Tuhan telah berkehendak.'), nl,
+    format('Kartu ~w-~w milik ~w berpindah ke tangan ~w.~n', [Warna, Jenis, Pemain, Tujuan]).
+    
