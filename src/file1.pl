@@ -143,6 +143,7 @@ aplikasikan_efek(kartu(hitam, mimic)) :- !,
         format('Kartu mimic menyalin efek ~w!~n', [JA]),
         aplikasikan_efek_mimic(KartuAksi)
     ;   write('Belum ada kartu aksi sebelumnya. Mimic berlaku seperti wild.'), nl,
+        update_warna_aktif(hitam),
         pindah_giliran
     ).
 
