@@ -1,4 +1,5 @@
 :- dynamic(giliran_sekarang/1).
+:- dynamic(giliran_ke/1). 
 :- dynamic(tangan_pemain/2).
 :- dynamic(discard_top/1).
 :- dynamic(warna_aktif/1).
@@ -8,7 +9,7 @@
 :- dynamic(urutan_pemain/1).
 :- dynamic(kartu_disembunyikan/2).
 :- dynamic(kartu_dibuang/1).
-:- dynamic(kartu_aksi_terakhir/1). 
+:- dynamic(kartu_aksi_terakhir/3).
 
 /* Facts */
 warna(merah). warna(kuning). warna(hijau). warna(biru).
@@ -28,9 +29,7 @@ valid_dimainkan(kartu(hitam, wild), kartu(_,JenisAtas), _) :-
 valid_dimainkan(kartu(hitam, wild_draw_four), kartu(_, JenisAtas), _):-
     JenisAtas \= wild,
     JenisAtas \= wild_draw_four.
-valid_dimainkan(kartu(hitam, mimic), kartu(_, JenisAtas), _) :-
-    JenisAtas \= wild,
-    JenisAtas \= wild_draw_four.
+valid_dimainkan(kartu(hitam, mimic), _, _).
 valid_dimainkan(kartu(Warna, _), _, Warna).
 valid_dimainkan(kartu(_, Jenis), kartu(_, Jenis), _).
 
@@ -80,8 +79,10 @@ reverseP([H|T], Acc, Hasil) :-
 
 /* Efek Kartu Aksi */
 catat_aksi_terakhir(Kartu) :-
+    giliran_sekarang(Pemain),
+    giliran_ke(N),
     retractall(kartu_aksi_terakhir(_)),
-    asserta(kartu_aksi_terakhir(Kartu)).
+    asserta(kartu_aksi_terakhir(Kartu, Pemain, N)).
     
 aplikasikan_efek(kartu(_, Jenis)) :-
     (jenis_angka(Jenis) ; Jenis == wild),
@@ -123,9 +124,12 @@ aplikasikan_efek(kartu(Warna, draw_two)) :-
 
 aplikasikan_efek(kartu(hitam, mimic)) :- !,
     write('Menelusuri riwayat permainan.'), nl,
-    (   kartu_aksi_terakhir(KartuAksi)
+    (   kartu_aksi_terakhir(KartuAksi, OlehSiapa, GiliranAksi)
     ->  KartuAksi = kartu(WA, JA),
-        format('Kartu aksi terakhir yang dimainkan: ~w-~w.~n', [WA, JA]),
+        giliran_ke(NSekarang),
+        SelisihGiliran is NSekarang - GiliranAksi,
+        format('Kartu aksi terakhir yang dimainkan: ~w-~w (oleh ~w, ~w giliran lalu)~n',
+               [WA, JA, OlehSiapa, SelisihGiliran]),
         format('Kartu mimic menyalin efek ~w!~n', [JA]),
         aplikasikan_efek_mimic(KartuAksi)
     ;   write('Belum ada kartu aksi sebelumnya. Mimic berlaku seperti wild.'), nl,
@@ -228,6 +232,10 @@ pindah_giliran :-
     urutan_pemain(Urutan),
     pemain_selanjutnya(Pemain, Urutan, Pemain1),
     asserta(giliran_sekarang(Pemain1)),
+    % increment counter giliran
+    retract(giliran_ke(N)),
+    N1 is N + 1,
+    asserta(giliran_ke(N1)),
     format('Giliran ~w.~n', [Pemain1]).
 
 get_element([Element|_], 0, Element).
