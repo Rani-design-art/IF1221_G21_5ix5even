@@ -438,9 +438,7 @@ ambil_elemen_ke(N, [_|T], Elem) :-
 tampilkanKartu :-
     giliran_sekarang(Pemain),
     (
-        % Tarik status dari memori tersembunyi
         retract(kartu_disembunyikan(Pemain, KartuYgDisembunyikan)) ->
-        % Karena kartu tidak pernah keluar dari tangan, kita tidak perlu repot append()
         KartuYgDisembunyikan = kartu(Warna, Jenis),
         format('Kartu ~w-~w berhasil ditampilkan dan kembali normal.~n', [Warna, Jenis]), !
     ;

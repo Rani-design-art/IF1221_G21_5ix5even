@@ -377,6 +377,7 @@ tangkap(TargetPemain) :-
     % 1. Validasi: pastikan TargetPemain beneran ada di dalam game
     urutan_pemain(ListPemain),
     member(TargetPemain, ListPemain),
+    !,
     
     giliran_sekarang(Pemanggil),
     
