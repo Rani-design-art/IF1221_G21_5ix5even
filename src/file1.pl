@@ -497,9 +497,10 @@ cek_semua_satu([Pemain|Pemain1]):-
 
 /* Pilih pemain acak */
 pilih_pemain_acak(Pemain):-
+    repeat,
     urutan_pemain(List),
     length(List, N),
-    random(N, I),
+    random(0, N, I),
     Pos is I + 1,
     ambil_kartu(Pos, List, Pemain),
 
@@ -508,30 +509,25 @@ pilih_pemain_acak(Pemain):-
     Len > 1, 
     !.
 
-pilih_pemain_acak(Pemain):-
-    pilih_pemain_acak(Pemain).
-
 /* Pilih kartu acak */
 pilih_kartu_acak(Pemain, Pos, Kartu):-
     tangan_pemain(Pemain, Tangan),
     length(Tangan, N),
-    random(N, I),
+    random(0, N, I),
     Pos is I + 1,
     ambil_kartu(Pos, Tangan, Kartu).
 
 /* Pilih pemain tujuan */
 pemain_tujuan(Pemain, Tujuan):-
+    repeat,
     urutan_pemain(List),
     length(List, N),
-    random(N, I),
+    random(0, N, I),
     Pos is I + 1,
     ambil_kartu(Pos, List, Tujuan),
 
     Pemain \= Tujuan,
     !.
-
-pemain_tujuan(Pemain, Tujuan):-
-    pemain_tujuan(Pemain, Tujuan).
 
 /* Pindahkan kartu */
 pindah_kartu(Pemain, Tujuan, PosisiKartu, KartuPilihan):-
@@ -554,7 +550,7 @@ godsHand:-
     !.
 
 godsHand:-
-    random(100, X),
+    random(0, 100, X),
     X >= 20,
     write('Tuhan tidak telah berkehendak.'), nl,
     !.
