@@ -365,7 +365,7 @@ kumpulkan_skor([Pemain|T], UrutanAsli, [skor(Poin, JmlKartu, Index, Pemain)|Sisa
     tangan_pemain(Pemain, Tangan),
     hitung_poin_tangan(Tangan, Poin),
     length(Tangan, JmlKartu),
-    get_indeks(UrutanAsli, Pemain, Index), % Index dipakai untuk tie-breaker ke-2
+    nth0(Index, UrutanAsli, Pemain), % Index dipakai untuk tie-breaker ke-2
     kumpulkan_skor(T, UrutanAsli, SisaSkor).
 
 cetak_urutan_pemenang([], _).
@@ -373,7 +373,6 @@ cetak_urutan_pemenang([skor(Poin, _, _, Pemain)|T], Peringkat) :-
     format('~w. ~w (~w poin)~n', [Peringkat, Pemain, Poin]),
     Peringkat1 is Peringkat + 1,
     cetak_urutan_pemenang(T, Peringkat1).
-    
 % --- FITUR TANGKAP ---
 
 tangkap(TargetPemain) :-
@@ -575,7 +574,7 @@ loadGame :-
     read(NamaFile),
     atom_concat(NamaFile, '.txt', NamaFileTxt),
     
-    (   exists_file(NamaFileTxt)
+    (   file_exists(NamaFileTxt)
     ->  loadGame_eksekusi(NamaFileTxt)
     ;   format('Error: File ~w tidak ditemukan.~n', [NamaFileTxt])
     ).
@@ -610,7 +609,7 @@ loadGame_eksekusi(NamaFileTxt) :-
     write('                      :@%#+.        +#-:'), nl,
     write('             .--:.    .%#*#        +@#*# .-+++-.'), nl,
     write('           .##=:-#%+  :%:          #+.. +%-..-#@+'), nl,
-    format('           @*     =@=-%@@@@@@@@@@@@@%+.:%-     =%:        Status permainan berhasil dimuat dari ~w.', [NamaFileTxt]), nl,
+    write('           @*     =@=-%@@@@@@@@@@@@@%+.:%-     =%:        Status permainan berhasil dimuat dari '), write(NamaFileTxt), write('.'), nl,
     write('           %=     =%*=.             .=*#%=     -%:           Selamat bermain~'), nl,
     write('            =#:                                =%-'), nl,
     write('          *%#-                                :*'), nl,
@@ -647,8 +646,8 @@ loadGame_eksekusi(NamaFileTxt) :-
     format('Melanjutkan giliran ~w.~n', [GiliranSekarang]).
 
 baca_semua_baris(Stream) :-
-    read_term(Stream, Term, [end_of_file(eof)]),
-    (   Term == eof
+    read(Stream, Term),
+    (   Term == end_of_file
     ->  true
     ;   proses_baris(Term),
         baca_semua_baris(Stream)
