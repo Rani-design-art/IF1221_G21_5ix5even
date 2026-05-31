@@ -295,36 +295,48 @@ tampilkan_aksi_utama(_) :-
     write('4. uni(NomorUrut)'), nl,
     write('5. godsHand'), nl,
     write('6. sembunyikanKartu(NomorUrut)'), nl,
-    write('7. tampilkanKartu'), nl.
+    write('7. tampilkanKartu'), nl,
+    ( mode_permainan(turnamen) -> write('8. swapKartu(NomorUrut, NomorUrutTeman)'), nl ; true ).
  
 /* LIHAT KARTU */
 lihatKartu :-
     giliran_sekarang(Pemain),
     tangan_pemain(Pemain, ListKartu),
     write('Berikut kartu yang anda miliki.'), nl,
-    tampilkan_list_kartu(ListKartu, Pemain, 1).
+    ( kartu_disembunyikan(Pemain, KS) -> S = KS ; S = none ),
+    tampilkan_list_kartu(ListKartu, S, 1),
+    ( mode_permainan(turnamen) ->
+        tim_pemain(_, Tim), member(Pemain, Tim), member(Teman, Tim), Teman \= Pemain,
+        format('~nBerikut kartu yang teman satu tim anda miliki (~w).~n', [Teman]),
+        tangan_pemain(Teman, KartuTeman),
+        ( kartu_disembunyikan(Teman, KST) -> ST = KST ; ST = none ),
+        tampilkan_list_kartu(KartuTeman, ST, 1)
+    ; true ).
  
 tampilkan_list_kartu([], _, _) :- !.
- 
-tampilkan_list_kartu([kartu(Warna, Jenis) | Sisa], Pemain, N) :-
-    (   kartu_disembunyikan(Pemain, kartu(Warna, Jenis))
-    ->  format('~w. ~w-~w (disembunyikan)~n', [N, Warna, Jenis])
-    ;   format('~w. ~w-~w~n', [N, Warna, Jenis])
-    ),
-    N1 is N + 1,
-    tampilkan_list_kartu(Sisa, Pemain, N1).
+tampilkan_list_kartu([kartu(Warna, Jenis) | Sisa], Sembunyi, N) :-
+    (   kartu(Warna, Jenis) == Sembunyi
+    ->  format('~w. ~w-~w (disembunyikan)~n', [N, Warna, Jenis]),
+        N1 is N + 1,
+        tampilkan_list_kartu(Sisa, none, N1) % Reset status sembunyi ke 'none'
+    ;   format('~w. ~w-~w~n', [N, Warna, Jenis]),
+        N1 is N + 1,
+        tampilkan_list_kartu(Sisa, Sembunyi, N1)
+    ).
  
 /* CEK INFO */
 cekInfo :-
     discard_top(kartu(Warna, Jenis)),
     format('Kartu discard top: ~w-~w.', [Warna, Jenis]), nl,
     nl,
- 
+    ( mode_permainan(turnamen) ->
+        tim_pemain(1, [A, B]), tim_pemain(2, [C, D]),
+        format('Tim 1: ~w, ~w~nTim 2: ~w, ~w~n~n', [A, B, C, D])
+    ; true ),
     urutan_pemain(ListPemain),
     write('Urutan pemain: '),
     cetak_urutan_pemain(ListPemain), nl,
     nl,
- 
     cetak_info_semua_pemain(ListPemain, 1).
  
 cetak_urutan_pemain([]).
@@ -336,7 +348,11 @@ cetak_urutan_pemain([P|Sisa]) :-
 cetak_info_semua_pemain([], _) :- !.
 cetak_info_semua_pemain([Pemain|Sisa], N) :-
     tangan_pemain(Pemain, ListKartu),
-    length(ListKartu, JumlahKartu),
+    length(ListKartu, JumlahAsli),
+    (   kartu_disembunyikan(Pemain, _)
+    ->  JumlahKartu is JumlahAsli - 1
+    ;   JumlahKartu = JumlahAsli
+    ),
     format('Nama pemain ~w: ~w~n', [N, Pemain]),
     format('Jumlah kartu : ~w~n', [JumlahKartu]),
     nl,
@@ -558,3 +574,26 @@ godsHand:-
     write('Tuhan telah berkehendak.'), nl,
     format('Kartu ~w-~w milik ~w berpindah ke tangan ~w.~n', [Warna, Jenis, Pemain, Tujuan]).
     
+
+/* BONUS MODE TURNAMEN: SWAP KARTU */
+swapKartu(UrutKu, UrutTeman) :-
+    mode_permainan(turnamen),
+    giliran_sekarang(Pemain),
+    tim_pemain(_, Tim), member(Pemain, Tim), member(Teman, Tim), Teman \= Pemain,
+    tangan_pemain(Pemain, TanganKu), length(TanganKu, LenKu),
+    tangan_pemain(Teman, TanganTeman), length(TanganTeman, LenTeman),
+    ( LenKu =:= 1 -> write('Gagal: Kartumu sisa 1.'), nl
+    ; LenTeman =:= 1 -> write('Gagal: Kartu teman sisa 1.'), nl
+    ; ambil_elemen_ke(UrutKu, TanganKu, KartuKu), ambil_elemen_ke(UrutTeman, TanganTeman, KartuTeman) ->
+        hapus_kartu_ke(UrutKu, TanganKu, TanganKuBaru),
+        hapus_kartu_ke(UrutTeman, TanganTeman, TanganTemanBaru),
+        append(TanganKuBaru, [KartuTeman], TanganKuFinal),
+        append(TanganTemanBaru, [KartuKu], TanganTemanFinal),
+        retract(tangan_pemain(Pemain, TanganKu)), asserta(tangan_pemain(Pemain, TanganKuFinal)),
+        retract(tangan_pemain(Teman, TanganTeman)), asserta(tangan_pemain(Teman, TanganTemanFinal)),
+        KartuKu = kartu(W1, J1), KartuTeman = kartu(W2, J2),
+        format('~w menukar kartu ~w-~w dengan kartu ~w-~w milik ~w.~n', [Pemain, W1, J1, W2, J2, Teman]),
+        write('Pertukaran kartu berhasil.'), nl,
+        pindah_giliran
+    ; write('Gagal: Nomor urut kartu tidak valid!'), nl
+    ).
