@@ -557,18 +557,15 @@ tulis_kartu_pemain(Stream, [Pemain|Sisa]) :-
 % helper untuk menulis kartu sembunyi
 tulis_kartu_sembunyi(_, []).
 tulis_kartu_sembunyi(Stream, [Pemain|Sisa]) :-
-    (   kartu_disembunyikan(Pemain, Kartu)
-    ->  Kartu = kartu(W, J),
-        atomic_list_concat([W, J], '-', WJ),
-        format(Stream, 'sembunyi(~w):~w.~n', [Pemain, WJ])
+    (   kartu_disembunyikan(Pemain, kartu(W, J))
+    ->  format(Stream, 'sembunyi(~w):~w-~w.~n', [Pemain, W, J])
     ;   true
     ),
     tulis_kartu_sembunyi(Stream, Sisa).
 
 % konversi list kartu internal ke format Warna-Jenis
 kartu_list_ke_format([], []).
-kartu_list_ke_format([kartu(W,J)|Sisa], [WJ|SisaFormat]) :-
-    atomic_list_concat([W, J], '-', WJ),
+kartu_list_ke_format([kartu(W,J)|Sisa], [W-J|SisaFormat]) :-
     kartu_list_ke_format(Sisa, SisaFormat).
 
 % load game
