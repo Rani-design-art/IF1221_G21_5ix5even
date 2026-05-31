@@ -365,7 +365,7 @@ kumpulkan_skor([Pemain|T], UrutanAsli, [skor(Poin, JmlKartu, Index, Pemain)|Sisa
     tangan_pemain(Pemain, Tangan),
     hitung_poin_tangan(Tangan, Poin),
     length(Tangan, JmlKartu),
-    nth0(Index, UrutanAsli, Pemain), % Index dipakai untuk tie-breaker ke-2
+    get_indeks(UrutanAsli, Pemain, Index), % Index dipakai untuk tie-breaker ke-2
     kumpulkan_skor(T, UrutanAsli, SisaSkor).
 
 cetak_urutan_pemenang([], _).
@@ -373,6 +373,7 @@ cetak_urutan_pemenang([skor(Poin, _, _, Pemain)|T], Peringkat) :-
     format('~w. ~w (~w poin)~n', [Peringkat, Pemain, Poin]),
     Peringkat1 is Peringkat + 1,
     cetak_urutan_pemenang(T, Peringkat1).
+    
 % --- FITUR TANGKAP ---
 
 tangkap(TargetPemain) :-
