@@ -17,7 +17,7 @@ Mensimulasikan permainan UNI dengan Prolog. Dengan memodelkan aturan permainan d
 
 ---
 
-## Perintah Utama
+## Fitur Utama
 
 | No. | Kategori | Perintah |
 |:---:|-------|-----------|
