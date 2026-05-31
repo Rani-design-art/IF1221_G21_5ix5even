@@ -17,8 +17,22 @@ Mensimulasikan permainan UNI dengan Prolog. Dengan memodelkan aturan permainan d
 
 ---
 
+## Prerequisites
+
+Sebelum menjalankan game, pastikan Anda sudah menginstal compiler **GNU Prolog** (gprolog) di perangkat Anda.
+* Unduh GNU Prolog resmi di: [http://www.gprolog.org/](http://www.gprolog.org/)
+
+---
+
 ## Cara Menjalankan Program
 
+1. Buka aplikasi **GNU Prolog** di terminal atau *command prompt* Anda.
+2. Pastikan posisi *working directory* terminal Anda berada di *root folder* proyek ini (`IF1221_G21_5ix5even/`).
+3. Lakukan kompilasi (*consult*) file utama dengan mengetikkan perintah berikut:
+   ```prolog
+   ['src/main.pl'].
+4. Setelah muncul (`yes`), mulailah permainan dengan memanggil (`startGame`)
+5. Ikuti instruksi di layar untuk memasukkan jumlah pemain dan nama pemain
 
 ---
 
