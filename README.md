@@ -23,7 +23,7 @@ Mensimulasikan permainan UNI dengan Prolog. Dengan memodelkan aturan permainan d
 ---
 
 ## Struktur Repository
-
+'''text
 IF1221_G21_5ix5even/
 ├── src/
 │   ├── main.pl       (Entry Game: startGame, saveGame, loadGame, endGame)
@@ -35,3 +35,5 @@ IF1221_G21_5ix5even/
 ├── .gitignore
 ├── LICENSE
 └── README.md
+
+'''
