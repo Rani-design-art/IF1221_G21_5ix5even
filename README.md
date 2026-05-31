@@ -17,6 +17,16 @@ Mensimulasikan permainan UNI dengan Prolog. Dengan memodelkan aturan permainan d
 
 ---
 
+## Perintah Utama
+
+| No. | Kategori | Perintah |
+|:---:|-------|-----------|
+| 2 | Memulai Permainan | `startGame`|
+| 1 | Fitur Dasar | `mainkanKartu(NomorUrut)`, `ambilKartu`, `tantang`, `uni(NomorUrut)` |
+| 2 | Fitur Khusus | `godsHand`, `sembunyikanKartu`, `tampilkanKartu` |
+| 3 | Informasi | `lihatKartu`, `cekInfo` |
+| 4 | Bantuan | `lihatCommand` |
+
 ## Prerequisites
 
 Sebelum menjalankan game, pastikan Anda sudah menginstal compiler **GNU Prolog** (gprolog) di perangkat Anda.
