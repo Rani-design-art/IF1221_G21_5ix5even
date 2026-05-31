@@ -10,8 +10,6 @@
 :- dynamic(kartu_disembunyikan/2).
 :- dynamic(kartu_dibuang/1).
 :- dynamic(kartu_aksi_terakhir/3).
-:- dynamic(warna_sebelum_wild/1).
-:- dynamic(pemain_wdf/1).
 
 /* Facts */
 warna(merah). warna(kuning). warna(hijau). warna(biru).
@@ -208,19 +206,12 @@ mainkanKartu(NomorUrutKartudiTangan) :-
             retract(discard_top(_)),
             asserta(discard_top(KartuPilihan)),
             
-            (KartuPilihan = kartu(hitam, wild_draw_four) ->
-                retractall(pemain_wdf(_)),
-                asserta(pemain_wdf(Pemain))
-            ; true),
-
-            (WarnaKartu == hitam -> 
-                warna_aktif(WarnaSaatIni),
-                retractall(warna_sebelum_wild(_)),
-                asserta(warna_sebelum_wild(WarnaSaatIni))
-            ; true),
-
             update_warna_aktif(WarnaKartu),
-            aplikasikan_efek(KartuPilihan)
+            (   ListKartuBaru == []
+            ->  endGame,
+                abort
+            ;   aplikasikan_efek(KartuPilihan)
+            )
         ;   write('Kartu tidak valid! Warna atau jenisnya tidak sesuai.'), nl,
             input_lagi
         )   ;   write('Nomor urut tidak valid! Anda tidak memiliki kartu di posisi tersebut.'), nl,
@@ -369,16 +360,15 @@ punya_kartu_valid(Pemain, kartu(Warna, Jenis)):-
 tantang:-
     write('Tantangan dilakukan!'), nl,
     giliran_sekarang(Sesudah),
-    pemain_wdf(Sebelum),
+    urutan_pemain(List),
+    pemain_sebelumnya(Sesudah, List, Sebelum),
     format('Memeriksa kartu ~w...~n', [Sebelum]),
     
-    warna_sebelum_wild(WarnaSebelum),
-    KartuCek = kartu(WarnaSebelum, dummy),
-    (punya_kartu_valid(Sebelum, KartuCek)->
+    kartu_dibuang(KartuSebelum),
+    (punya_kartu_valid(Sebelum, KartuSebelum)->
         tantangBerhasil(Sebelum);tantangGagal(Sesudah)),
     retract(efek_kartu(_)),
     asserta(efek_kartu(none)),
-    retractall(pemain_wdf(_)),
     pindah_giliran.
 
 tantangBerhasil(Pemain):-
@@ -430,14 +420,12 @@ uni(NomorUrut) :-
             retract(discard_top(_)),
             asserta(discard_top(KartuPilihan)),
 
-            (WarnaKartu == hitam -> 
-                warna_aktif(WarnaSaatIni),
-                retractall(warna_sebelum_wild(_)),
-                asserta(warna_sebelum_wild(WarnaSaatIni))
-            ; true),
-
             update_warna_aktif(WarnaKartu),
-            aplikasikan_efek(KartuPilihan)
+            (   ListKartuBaru == []
+            ->  endGame,
+                abort
+            ;   aplikasikan_efek(KartuPilihan)
+            )
         ;   write('Kartu tidak valid! Warna atau jenisnya tidak sesuai dengan meja.'), nl
         )
     ;   write('Nomor urut tidak valid! Anda tidak memiliki kartu di posisi tersebut.'), nl
@@ -497,10 +485,9 @@ cek_semua_satu([Pemain|Pemain1]):-
 
 /* Pilih pemain acak */
 pilih_pemain_acak(Pemain):-
-    repeat,
     urutan_pemain(List),
     length(List, N),
-    random(0, N, I),
+    random(N, I),
     Pos is I + 1,
     ambil_kartu(Pos, List, Pemain),
 
@@ -509,25 +496,30 @@ pilih_pemain_acak(Pemain):-
     Len > 1, 
     !.
 
+pilih_pemain_acak(Pemain):-
+    pilih_pemain_acak(Pemain).
+
 /* Pilih kartu acak */
 pilih_kartu_acak(Pemain, Pos, Kartu):-
     tangan_pemain(Pemain, Tangan),
     length(Tangan, N),
-    random(0, N, I),
+    random(N, I),
     Pos is I + 1,
     ambil_kartu(Pos, Tangan, Kartu).
 
 /* Pilih pemain tujuan */
 pemain_tujuan(Pemain, Tujuan):-
-    repeat,
     urutan_pemain(List),
     length(List, N),
-    random(0, N, I),
+    random(N, I),
     Pos is I + 1,
     ambil_kartu(Pos, List, Tujuan),
 
     Pemain \= Tujuan,
     !.
+
+pemain_tujuan(Pemain, Tujuan):-
+    pemain_tujuan(Pemain, Tujuan).
 
 /* Pindahkan kartu */
 pindah_kartu(Pemain, Tujuan, PosisiKartu, KartuPilihan):-
@@ -550,7 +542,7 @@ godsHand:-
     !.
 
 godsHand:-
-    random(0, 100, X),
+    random(100, X),
     X >= 20,
     write('Tuhan tidak telah berkehendak.'), nl,
     !.
