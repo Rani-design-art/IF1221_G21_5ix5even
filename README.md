@@ -21,11 +21,11 @@ Mensimulasikan permainan UNI dengan Prolog. Dengan memodelkan aturan permainan d
 
 | No. | Kategori | Perintah |
 |:---:|-------|-----------|
-| 2 | Memulai Permainan | `startGame`|
-| 1 | Fitur Dasar | `mainkanKartu(NomorUrut)`, `ambilKartu`, `tantang`, `uni(NomorUrut)` |
-| 2 | Fitur Khusus | `godsHand`, `sembunyikanKartu`, `tampilkanKartu` |
-| 3 | Informasi | `lihatKartu`, `cekInfo` |
-| 4 | Bantuan | `lihatCommand` |
+| 1 | Memulai Permainan | `startGame`, `1. Mode Klasik`, `2. Mode Turnamen` |
+| 2 | Fitur Dasar | `mainkanKartu(NomorUrut)`, `ambilKartu`, `tantang`, `uni(NomorUrut)`, `saveGame`, `loadGame` |
+| 3 | Fitur Khusus | `godsHand`, `sembunyikanKartu`, `tampilkanKartu` |
+| 4 | Informasi | `lihatKartu`, `cekInfo` |
+| 5 | Bantuan | `lihatCommand` |
 
 ## Prerequisites
 
