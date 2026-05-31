@@ -10,6 +10,8 @@
 :- dynamic(kartu_disembunyikan/2).
 :- dynamic(kartu_dibuang/1).
 :- dynamic(kartu_aksi_terakhir/3).
+:- dynamic(warna_sebelum_wild/1).
+:- dynamic(pemain_wdf/1).
 
 /* Facts */
 warna(merah). warna(kuning). warna(hijau). warna(biru).
@@ -206,6 +208,17 @@ mainkanKartu(NomorUrutKartudiTangan) :-
             retract(discard_top(_)),
             asserta(discard_top(KartuPilihan)),
             
+            (KartuPilihan = kartu(hitam, wild_draw_four) ->
+                retractall(pemain_wdf(_)),
+                asserta(pemain_wdf(Pemain))
+            ; true),
+
+            (WarnaKartu == hitam -> 
+                warna_aktif(WarnaSaatIni),
+                retractall(warna_sebelum_wild(_)),
+                asserta(warna_sebelum_wild(WarnaSaatIni))
+            ; true),
+
             update_warna_aktif(WarnaKartu),
             aplikasikan_efek(KartuPilihan)
         ;   write('Kartu tidak valid! Warna atau jenisnya tidak sesuai.'), nl,
@@ -356,15 +369,16 @@ punya_kartu_valid(Pemain, kartu(Warna, Jenis)):-
 tantang:-
     write('Tantangan dilakukan!'), nl,
     giliran_sekarang(Sesudah),
-    urutan_pemain(List),
-    pemain_sebelumnya(Sesudah, List, Sebelum),
+    pemain_wdf(Sebelum),
     format('Memeriksa kartu ~w...~n', [Sebelum]),
     
-    kartu_dibuang(KartuSebelum),
-    (punya_kartu_valid(Sebelum, KartuSebelum)->
+    warna_sebelum_wild(WarnaSebelum),
+    KartuCek = kartu(WarnaSebelum, dummy),
+    (punya_kartu_valid(Sebelum, KartuCek)->
         tantangBerhasil(Sebelum);tantangGagal(Sesudah)),
     retract(efek_kartu(_)),
     asserta(efek_kartu(none)),
+    retractall(pemain_wdf(_)),
     pindah_giliran.
 
 tantangBerhasil(Pemain):-
@@ -415,6 +429,12 @@ uni(NomorUrut) :-
             asserta(kartu_dibuang(KartuAtas)),
             retract(discard_top(_)),
             asserta(discard_top(KartuPilihan)),
+
+            (WarnaKartu == hitam -> 
+                warna_aktif(WarnaSaatIni),
+                retractall(warna_sebelum_wild(_)),
+                asserta(warna_sebelum_wild(WarnaSaatIni))
+            ; true),
 
             update_warna_aktif(WarnaKartu),
             aplikasikan_efek(KartuPilihan)
