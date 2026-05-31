@@ -5,6 +5,8 @@
 :- dynamic(status_uni/1).
 :- dynamic(arah_permainan/1).
 :- dynamic(kartu_disembunyikan/2).
+:- dynamic(mode_permainan/1).
+:- dynamic(tim_pemain/2).
 
 startGame :-
     % bersihin state dari sisa game sebelumnya (kalau ada)
@@ -20,11 +22,32 @@ startGame :-
     retractall(arah_permainan(_)),
     retractall(status_uni(_)),
     retractall(kartu_disembunyikan(_, _)),
+    retractall(mode_permainan(_)),
+    retractall(tim_pemain(_, _)),
     asserta(arah_permainan(kanan)),
 
-    % minta input jumlah sm nama pemain
-    input_jumlah_pemain(N),
-    input_nama_pemain(N, [], ListPemain),
+    write('Tersedia 2 mode permainan.'), nl,
+    write('1. Mode klasik'), nl,
+    write('2. Mode turnamen'), nl,
+    write('Pilih mode permainan: '), read(ModeInput),
+
+    ( ModeInput == 2 ->
+        asserta(mode_permainan(turnamen)),
+        write('Permainan dimulai dalam mode turnamen.'), nl,
+        input_nama_pemain(4, [], ListPemainTemp),
+        reverse(ListPemainTemp, ListPemainAsli),
+        acak_deck(ListPemainAsli, ListPemainAcak),
+        ListPemainAcak = [P1, P2, P3, P4],
+        asserta(tim_pemain(1, [P1, P3])),
+        asserta(tim_pemain(2, [P2, P4])),
+        format('Membentuk tim secara acak...~nTim 1: ~w, ~w~nTim 2: ~w, ~w~n', [P1, P3, P2, P4]),
+        ListPemain = ListPemainAcak
+    ;
+        asserta(mode_permainan(klasik)),
+        input_jumlah_pemain(N),
+        input_nama_pemain(N, [], ListPemainTemp),
+        reverse(ListPemainTemp, ListPemain)
+    ),
 
     % simpan data ke state game
     asserta(urutan_pemain(ListPemain)),
@@ -43,18 +66,18 @@ startGame :-
     write('                      :@%#+.        +#-:'), nl,
     write('             .--:.    .%#*#        +@#*# .-+++-.'), nl,
     write('           .##=:-#%+  :%:          #+.. +%-..-#@+'), nl,
-    write('           @*     =@=-%@@@@@@@@@@@@@%+.:%-     =%:        Game berhasil disetup!'), nl,
+    write('           @* =@=-%@@@@@@@@@@@@@%+.:%-     =%:        Game berhasil disetup!'), nl,
     write('           %=     =%*=.             .=*#%=     -%:           Selamat bermain~'), nl,
     write('            =#:                                =%-'), nl,
     write('          *%#-                                :*'), nl,
     write('        =@#                                    .#@:                  ..'), nl,
-    write('      :%%:                                       .*@*               .:=#+'), nl,
+    write('      :%%:                                       .*@* .:=#+'), nl,
     write('    .*@+            -##*+:           =#%#*+        :%%.            :+#+ +='), nl,
     write('    +@-                                             :#@.              *#'), nl,
     write('   #@-               ...               ..            .%@:  *@%%%@*'), nl,
     write('  +@-             =@%=:*%-          -%%++%%-          =@*-@*::::=@+===-:'), nl,
     write(' -@#             -@@#==#@%.        .%@*.  #%.          %@@*:::::-%#-:-*@+'), nl,
-    write(' +@:         .....%%=@%@@*         .%@*@@%@%           *@@-::::::::::::=%:'), nl,
+    write(' +@:         .....%%=@%@@* .%@*@@%@%           *@@-::::::::::::=%:'), nl,
     write(' *%.      .%*-%+--:-*%%%=           :#%#@@#:=+:=--:    -@@+::::::::::::=%-'), nl,
     write('.#%      .#=-#==%-##          +@-      .:..+#-%#=%*%.  :@@@-::::::::::=@+'), nl,
     write('.#%.      ..:::=::-.       %#*@@=--       .=:=+:==%-   :@=*@-:::::::+%@*'), nl,
@@ -73,7 +96,7 @@ startGame :-
     write('          =*#**+%#:                        :*%='), nl,
     write('                 -#@*:                  =#%*:'), nl,
     write('                    .=*%%+  .+.  -+**%%#-'), nl,
-    write('                        :%= :%*  *%'), nl,
+    write('                        :%= :%* *%'), nl,
     write('                         +%..#* =@:'), nl,
     write('                          .===*@+'), nl,
     format('Pemain: ~w~n', [ListPemain]),
@@ -142,12 +165,11 @@ startGame :-
     asserta(deck_kartu(DeckFinal)),
     
     % update warna aktif berdasarkan kartu awal
-    KartuAwal = kartu(WarnaAwal, _),
+    KartuAwal = kartu(WarnaAwal, JenisAwal),
     asserta(warna_aktif(WarnaAwal)),
     
-    % --- BAGIAN INI YANG DIPERBAIKI ---
     write('Setiap pemain mendapatkan 7 kartu acak.'), nl,
-    format('Kartu discard top: ~w-~w.~n', [WarnaAwal, KartuAwal]),
+    format('Kartu discard top: ~w-~w.~n', [WarnaAwal, JenisAwal]),
     format('Giliran ~w.~n', [PemainPertama]).
 
 % helper bwt minta input jumlah pemain (batas 2-4)
@@ -286,6 +308,7 @@ pick_at_index([H|T], I, Card, [H|Rest]) :-
 % --- ENDGAME & NGITUNG POIN ---
 
 % aturan nilai poin kartu
+poin_kartu(kartu(_, 0), 1) :- !.
 poin_kartu(kartu(_, Jenis), Poin) :-
     jenis_angka(Jenis), Poin is Jenis, !.
 poin_kartu(kartu(_, Jenis), 10) :-
@@ -313,18 +336,30 @@ endGame :-
     format('Permainan selesai! ~w menghabiskan semua kartunya!~n~n', [Pemenang]),
     write('Berikut perhitungan poin sisa kartu.'), nl,
     
-    % nyetak perhitungan poin tiap pemain
     urutan_pemain(UrutanAsli),
-    cetak_semua_rincian(UrutanAsli),
-    nl,
-    
-    write('Urutan pemenang:'), nl,
-    kumpulkan_skor(UrutanAsli, UrutanAsli, ListSkor),
-    sort(ListSkor, ListSkorSorted), 
-    cetak_urutan_pemenang(ListSkorSorted, 1),
-    nl,
-    format('Selamat, ~w menjadi pemenang!~n', [Pemenang]),
-    !.
+    cetak_semua_rincian(UrutanAsli), nl,
+
+    ( mode_permainan(turnamen) ->
+        tim_pemain(1, [A, B]), tim_pemain(2, [C, D]),
+        tangan_pemain(A, TgA), hitung_poin_tangan(TgA, PoinA),
+        tangan_pemain(B, TgB), hitung_poin_tangan(TgB, PoinB),
+        tangan_pemain(C, TgC), hitung_poin_tangan(TgC, PoinC),
+        tangan_pemain(D, TgD), hitung_poin_tangan(TgD, PoinD),
+        Total1 is PoinA + PoinB, Total2 is PoinC + PoinD,
+        write('Berikut perhitungan poin untuk masing-masing tim.'), nl,
+        format('Tim 1 (~w, ~w): ~w poin~n', [A, B, Total1]),
+        format('Tim 2 (~w, ~w): ~w poin~n', [C, D, Total2]),
+        ( Total1 < Total2 -> format('Selamat, Tim 1 menjadi pemenang!~n', [])
+        ; Total1 > Total2 -> format('Selamat, Tim 2 menjadi pemenang!~n', [])
+        ; format('Permainan Seri!~n', []) )
+    ;
+        write('Urutan pemenang:'), nl,
+        kumpulkan_skor(UrutanAsli, UrutanAsli, ListSkor),
+        sort(ListSkor, ListSkorSorted), 
+        cetak_urutan_pemenang(ListSkorSorted, 1),
+        nl,
+        format('Selamat, ~w menjadi pemenang!~n', [Pemenang])
+    ), !.
 
 endGame :-
     write('Belum ada pemain yang menghabiskan kartu. Lanjut main!'), nl.
@@ -365,7 +400,7 @@ kumpulkan_skor([Pemain|T], UrutanAsli, [skor(Poin, JmlKartu, Index, Pemain)|Sisa
     tangan_pemain(Pemain, Tangan),
     hitung_poin_tangan(Tangan, Poin),
     length(Tangan, JmlKartu),
-    nth0(Index, UrutanAsli, Pemain), % Index dipakai untuk tie-breaker ke-2
+    get_indeks(UrutanAsli, Pemain, Index), % INI UDAH DIGANTI PAKE FUNGSI BUATAN AMI
     kumpulkan_skor(T, UrutanAsli, SisaSkor).
 
 cetak_urutan_pemenang([], _).
@@ -373,6 +408,7 @@ cetak_urutan_pemenang([skor(Poin, _, _, Pemain)|T], Peringkat) :-
     format('~w. ~w (~w poin)~n', [Peringkat, Pemain, Poin]),
     Peringkat1 is Peringkat + 1,
     cetak_urutan_pemenang(T, Peringkat1).
+
 % --- FITUR TANGKAP ---
 
 tangkap(TargetPemain) :-
@@ -382,11 +418,15 @@ tangkap(TargetPemain) :-
     !,
     
     giliran_sekarang(Pemanggil),
+    (   Pemanggil == TargetPemain ->
+        write('Ngapain nangkep diri sendiri kocak!'), nl, !, fail
+    ;   true
+    ),
     
     % 2. Cek jebakan: apakah target sedang menyembunyikan kartu?
     (   kartu_disembunyikan(TargetPemain, _) ->
         format('Eits! Tangkap gagal! Ada kartu yang disembunyikan oleh ~w.~n',[TargetPemain]),
-        write('Hukuman: '), write(Pemanggil), write(' harus ambil 2 kartu tambahan.'), nl,
+        format('Hukuman: ~w mendapatkan 1 kartu penalti.~n', [Pemanggil]),
         
         % Beri 1 kartu penalti ke pemanggil
         deck_kartu(DeckSekarang),
@@ -410,8 +450,8 @@ tangkap(TargetPemain) :-
             % Jika kartunya sisa 1, cek apakah dia udah bilang UNI
             (   \+ status_uni(TargetPemain) ->
                 % Kalau BELUM bilang UNI -> Kena hukuman ambil 2 kartu
-                write('MAMPUSSSZZSS! '), write(TargetPemain), write(' lupa bilang UNI kan lu'), nl,
-                write('Hukuman: '), write(TargetPemain), write(' harus ambil 2 kartu tambahan.'), nl,
+                format('MAMPUSSSZZSS! ~w lupa bilang UNI kan lu~n', [TargetPemain]),
+                format('Hukuman: ~w harus ambil 2 kartu tambahan.~n', [TargetPemain]),
 
                 % Proses ambil 2 kartu dari deck
                 deck_kartu(DeckNormal),
@@ -424,21 +464,38 @@ tangkap(TargetPemain) :-
                 % Update state tangan pemain yang ditangkap
                 append(Tangan, KartuHukum2, TanganBaruNormal),
                 retract(tangan_pemain(TargetPemain, Tangan)),
-                asserta(tangan_pemain(TargetPemain, TanganBaruNormal))
+                asserta(tangan_pemain(TargetPemain, TanganBaruNormal)),
+                
+                pindah_giliran
             ;
                 % Kalau SUDAH bilang UNI
-                write('enak aje lu '), write(TargetPemain), write(' udah bilang UNI tadi, jadi aman dongg'), nl
+                format('enak aje lu ~w udah bilang UNI tadi, jadi aman dongg~n', [TargetPemain]),
+                pindah_giliran
             )
         ;
             % Jika kartunya BUKAN sisa 1
-            write('Salah tangkap! Kartu '), write(TargetPemain), write(' masih '), write(JumlahKartu), write(' lembar...'), nl
+            format('Salah tangkap! Kartu ~w masih ~w lembar...~n', [TargetPemain, JumlahKartu]),
+            format('Hukuman: ~w mendapatkan 1 kartu penalti.~n', [Pemanggil]),
+            
+            % Proses ambil 1 kartu penalti untuk pemanggil
+            deck_kartu(DeckPenalti),
+            ambil_N_kartu(1, DeckPenalti, KartuPenalti1, SisaDeckPenalti),
+            retract(deck_kartu(DeckPenalti)),
+            asserta(deck_kartu(SisaDeckPenalti)),
+            
+            % Update tangan pemanggil
+            tangan_pemain(Pemanggil, TgnPemanggil),
+            append(TgnPemanggil, KartuPenalti1, TgnBaruPemanggil),
+            retract(tangan_pemain(Pemanggil, TgnPemanggil)),
+            asserta(tangan_pemain(Pemanggil, TgnBaruPemanggil)),
+            
+            pindah_giliran
         )
     ), !. 
 
-
 % Fallback kalau nama pemain yang diinput ngawur / typo
 tangkap(TargetPemain) :-
-    write('??? Siapa '), write(TargetPemain), write('? Ga ada di game ini! Cek typo.'), nl.
+    format('??? Siapa ~w? Ga ada di game ini! Cek typo.~n', [TargetPemain]).
 
 % --- SAVE & LOAD GAME ---
 
@@ -472,23 +529,30 @@ saveGame_eksekusi :-
 
     open(NamaFileTxt, write, Stream),
     
+    ( mode_permainan(turnamen) ->
+        format(Stream, 'mode:turnamen.~n', []),
+        tim_pemain(1, Tim1), tim_pemain(2, Tim2),
+        format(Stream, 'tim1:~q.~n', [Tim1]),
+        format(Stream, 'tim2:~q.~n', [Tim2])
+    ; format(Stream, 'mode:klasik.~n', []) ),
+
     % urutan_pemain
-    format(Stream, 'urutan_pemain:~w.~n', [UrutanPemain]),
+    format(Stream, 'urutan_pemain:~q.~n', [UrutanPemain]),
     
     % giliran
-    format(Stream, 'giliran:~w.~n', [GiliranSekarang]),
+    format(Stream, 'giliran:~q.~n', [GiliranSekarang]),
     
     % discard_top
-    format(Stream, 'discard_top:~w-~w.~n', [WarnaTop, JenisTop]),
+    format(Stream, 'discard_top:~q-~q.~n', [WarnaTop, JenisTop]),
     
     % warna_aktif
-    format(Stream, 'warna_aktif:~w.~n', [WarnaAktif]),
+    format(Stream, 'warna_aktif:~q.~n', [WarnaAktif]),
     
     % arah_permainan
-    format(Stream, 'arah_permainan:~w.~n', [Arah]),
+    format(Stream, 'arah_permainan:~q.~n', [Arah]),
     
     % status_UNI
-    format(Stream, 'status_UNI:~w.~n', [ListUNI]),
+    format(Stream, 'status_UNI:~q.~n', [ListUNI]),
     
     % kartu tiap pemain
     tulis_kartu_pemain(Stream, UrutanPemain),
@@ -496,6 +560,11 @@ saveGame_eksekusi :-
     % simpan status kartu tersembunyi
     tulis_kartu_sembunyi(Stream, UrutanPemain),
 
+    % simpan aksi terakhir (untuk Mimic)
+    (   kartu_aksi_terakhir(K, O, G)
+    ->  format(Stream, 'aksi_terakhir:~q-~q-~q.~n', [K, O, G])
+    ;   true
+    ),
     close(Stream),
     write('                                                                        @@@@@@@@@'), nl,
     write('                                                                      @@@       @@@'), nl,
@@ -536,7 +605,7 @@ saveGame_eksekusi :-
     write('        @@@                                    @'), nl,
     write('      @@.                                     @@'), nl,
     write('      @                                       @'), nl,
-    format('      @@.@@@@                                @@      Status permainan berhasil disimpan ke ~w.', [NamaFileTxt]), nl,
+    write('      @@.@@@@                                @@      Status permainan berhasil disimpan ke '), write(NamaFileTxt), write('.'), nl,
     write('     @      @                                @-'), nl,
     write('    @       @@                              @@'), nl,
     write('    @       @@                               @@'), nl,
@@ -550,14 +619,14 @@ tulis_kartu_pemain(_, []).
 tulis_kartu_pemain(Stream, [Pemain|Sisa]) :-
     tangan_pemain(Pemain, ListKartu),
     kartu_list_ke_format(ListKartu, ListFormat),
-    format(Stream, 'kartu(~w):~w.~n', [Pemain, ListFormat]),
+    format(Stream, 'kartu(~q):~q.~n', [Pemain, ListFormat]),
     tulis_kartu_pemain(Stream, Sisa).
 
 % helper untuk menulis kartu sembunyi
 tulis_kartu_sembunyi(_, []).
 tulis_kartu_sembunyi(Stream, [Pemain|Sisa]) :-
     (   kartu_disembunyikan(Pemain, kartu(W, J))
-    ->  format(Stream, 'sembunyi(~w):~w-~w.~n', [Pemain, W, J])
+    ->  format(Stream, 'sembunyi(~q):~q-~q.~n', [Pemain, W, J])
     ;   true
     ),
     tulis_kartu_sembunyi(Stream, Sisa).
@@ -592,6 +661,8 @@ loadGame_eksekusi(NamaFileTxt) :-
     retractall(giliran_ke(_)), 
     retractall(status_uni(_)),
     retractall(arah_permainan(_)),
+    retractall(mode_permainan(_)),
+    retractall(tim_pemain(_, _)),
 
     open(NamaFileTxt, read, Stream),
     baca_semua_baris(Stream),
@@ -609,18 +680,18 @@ loadGame_eksekusi(NamaFileTxt) :-
     write('                      :@%#+.        +#-:'), nl,
     write('             .--:.    .%#*#        +@#*# .-+++-.'), nl,
     write('           .##=:-#%+  :%:          #+.. +%-..-#@+'), nl,
-    write('           @*     =@=-%@@@@@@@@@@@@@%+.:%-     =%:        Status permainan berhasil dimuat dari '), write(NamaFileTxt), write('.'), nl,
+    write('           @* =@=-%@@@@@@@@@@@@@%+.:%-     =%:        Status permainan berhasil dimuat dari '), write(NamaFileTxt), write('.'), nl,
     write('           %=     =%*=.             .=*#%=     -%:           Selamat bermain~'), nl,
     write('            =#:                                =%-'), nl,
     write('          *%#-                                :*'), nl,
     write('        =@#                                    .#@:                  ..'), nl,
-    write('      :%%:                                       .*@*               .:=#+'), nl,
+    write('      :%%:                                       .*@* .:=#+'), nl,
     write('    .*@+            -##*+:           =#%#*+        :%%.            :+#+ +='), nl,
     write('    +@-                                             :#@.              *#'), nl,
     write('   #@-               ...               ..            .%@:  *@%%%@*'), nl,
     write('  +@-             =@%=:*%-          -%%++%%-          =@*-@*::::=@+===-:'), nl,
     write(' -@#             -@@#==#@%.        .%@*.  #%.          %@@*:::::-%#-:-*@+'), nl,
-    write(' +@:         .....%%=@%@@*         .%@*@@%@%           *@@-::::::::::::=%:'), nl,
+    write(' +@:         .....%%=@%@@* .%@*@@%@%           *@@-::::::::::::=%:'), nl,
     write(' *%.      .%*-%+--:-*%%%=           :#%#@@#:=+:=--:    -@@+::::::::::::=%-'), nl,
     write('.#%      .#=-#==%-##          +@-      .:..+#-%#=%*%.  :@@@-::::::::::=@+'), nl,
     write('.#%.      ..:::=::-.       %#*@@=--       .=:=+:==%-   :@=*@-:::::::+%@*'), nl,
@@ -639,7 +710,7 @@ loadGame_eksekusi(NamaFileTxt) :-
     write('          =*#**+%#:                        :*%='), nl,
     write('                 -#@*:                  =#%*:'), nl,
     write('                    .=*%%+  .+.  -+**%%#-'), nl,
-    write('                        :%= :%*  *%'), nl,
+    write('                        :%= :%* *%'), nl,
     write('                         +%..#* =@:'), nl,
     write('                          .===*@+'), nl,
     giliran_sekarang(GiliranSekarang),
@@ -653,8 +724,9 @@ baca_semua_baris(Stream) :-
         baca_semua_baris(Stream)
     ).
 
-
-
+proses_baris(mode : Mode) :- !, asserta(mode_permainan(Mode)).
+proses_baris(tim1 : List) :- !, asserta(tim_pemain(1, List)).
+proses_baris(tim2 : List) :- !, asserta(tim_pemain(2, List)).
 proses_baris(urutan_pemain : ListPemain) :- !,
     asserta(urutan_pemain(ListPemain)).
 
@@ -687,6 +759,9 @@ proses_baris(kartu(Nama) : ListFormat) :- !,
 proses_baris(sembunyi(Nama) : FormatKartu) :- !,
     FormatKartu =.. [-, W, J],
     asserta(kartu_disembunyikan(Nama, kartu(W, J))).
+
+proses_baris(aksi_terakhir : K-O-G) :- !,
+    asserta(kartu_aksi_terakhir(K, O, G)).
 
 proses_baris(Term) :-
     format('[loadGame] Baris tidak dikenali, dilewati: ~w~n', [Term]).
