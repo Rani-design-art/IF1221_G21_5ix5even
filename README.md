@@ -16,3 +16,22 @@ Mensimulasikan permainan UNI dengan Prolog. Dengan memodelkan aturan permainan d
 | 5 | Josephine Bintang N.L | 13525139 |
 
 ---
+
+## Cara Menjalankan Program
+
+
+---
+
+## Struktur Repository
+
+IF1221_G21_5ix5even/
+├── src/
+│   ├── main.pl       # Entry Game — startGame, saveGame, loadGame, endGame
+│   └── file1.pl      # Logika Game/fitur — kartu, validasi, efek, aksi pemain
+├── docs/
+│   ├── Milestone1_G21.pdf   # Laporan progress Milestone 1
+│   ├── Milestone2_G21.pdf   # Laporan progress Milestone 2
+│   └── catatan.md           # Catatan pengerjaan kelompok
+├── .gitignore
+├── LICENSE
+└── README.md
